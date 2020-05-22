@@ -35,80 +35,126 @@ void puts(const char* str) {
 	terminal::write(str);
 }
 
+////////////////
+
+struct printf_details {
+	int min_field_width;
+	bool is_zero_padded;
+	bool is_long;
+};
+
 const char* HEX_DIGITS = "0123456789ABCDEF";
 
-template<typename Printer>
-u32 printf_d(int value, u32 base, Printer printer) {
+template<typename Printer, typename Num>
+void printf_dux(int value, Num base, const printf_details& details, Printer printer) {
 	
-	u32 written = 0;
+	// TODO : Fix duplication, better state machine
+
 	if(base == 10 && value < 0) {
 		value = -value;
 		printer('-');
-		written += 1;
-	}
-	else if(base == 16) {
-		printer('0');
-		printer('x');
-		written += 2;
 	}
 
 	if(value == 0) {
+		for(u32 i=1; i<details.min_field_width; ++i)
+			printer(details.is_zero_padded ? '0' : ' ');
 		printer('0');
-		written += 1;
-		return written;
+		return;
 	}
 	
-	// Get the digits in reverse order, then walk back to the beginning of the array
-	char buff[32];
-	char *buff_ptr = &buff[0];
+	// Enter digits into a buffer from end to beginning
+	static char buff[32];
+	char *buff_ptr = &buff[31];
+	i32 chars_written=0;
 
 	while(value) {
+		--buff_ptr;
 		*buff_ptr = HEX_DIGITS[value % base];
-		buff_ptr++;
+		
+		chars_written ++;
 		value /= base;
 	}
 
-	// TODO : Zero-padding here.
+	// If more characters still needed, use padding
+	for(u32 i=chars_written; i<details.min_field_width; ++i)
+		printer(details.is_zero_padded ? '0' : ' ');
 
-	while(buff_ptr != buff) {
-		buff_ptr--;
-		printer(*buff_ptr);
-		written += 1;
-	}
-
-	return written;
+	// Print out the actual buffer data
+	while(chars_written--)
+		printer(*buff_ptr++);
 }
 
 i32 printf(const char* format, ...) {
+	
+	// Function which actually receives characters
+	i32 written = 0;
+	const auto printer = [&written] (const char c) { written++; putc(c); };
+
+	// Parse details and state machine
+	enum State { CHAR=0, FORMING=10} state = CHAR;
+	printf_details details{0,0,0};
+
+	const auto end_field = [&]{ 
+		details = printf_details{0,0,0};
+		state = CHAR;
+	};
+
+	// %04d
+	// %
+
 	va_list parameters;
 	va_start(parameters, format);
+	for(;*format != '\0'; format++) {
 
-	i32 written = 0;
-	while(*format != '\0') {
-		if(*format == '%') {
-
-			// TODO : Formatting, padding, etc. (%04d, %-4s, etc.)
-
-			if(format[1] == 'd' || format[1] == 'x') {
-				const u32 base = (format[1] == 'd') ? 10 : 16;
-				written += printf_d(va_arg(parameters, int), base, [](const char c) { putc(c); });
-				format += 2;
-			} 
-			
-			else if(format[1] == 's') {
-				const char* str = va_arg(parameters, const char*);
-				puts(str);
-				written += strlen(str);
-				format += 2;
-			} 
-			
-		} else {
-			written ++;
-			putc(*format++);
+		if(state == CHAR) {
+			if(*format == '%') {
+				state = FORMING;
+				if(format[1] == '0') {
+					format++;
+					details.is_zero_padded = true;
+				}
+			}
+			else
+				printer(*format);
 		}
-	}
 
+		if(state == FORMING) {
+			if(*format == 'l') {
+				details.is_long = true;
+			}
+			else if(*format >= '0' && *format <= '9') {
+				details.min_field_width = details.min_field_width*10 + (*format - '0');
+			}
+
+			else if(*format == 'x' && details.is_long) {
+				u64 val = va_arg(parameters, u64);
+				printf_dux(val, 16, details, printer);
+				end_field();
+			}
+			else if(*format == 'x' && !details.is_long) {
+				u32 val = va_arg(parameters, u32);
+				printf_dux(val, 16, details, printer);
+				end_field();
+			}
+
+			else if(*format == 'd' && details.is_long) {
+				i64 val = va_arg(parameters, i64);
+				printf_dux(val, 10, details, printer);
+				end_field();
+			}
+			else if(*format == 'd' && !details.is_long) {
+				i32 val = va_arg(parameters, i32);
+				printf_dux(val, 10, details, printer);
+				end_field();
+			}
+
+			// TODO: %s, %c
+
+		}
+
+	}
 	va_end(parameters);
+
 	return written;
 }
  
