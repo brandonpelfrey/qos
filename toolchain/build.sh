@@ -1,13 +1,31 @@
 #!/bin/bash
 
-CURDIR=$(realpath $(dirname $0))
+export SCRIPT_DIR=$(realpath $(dirname $0))
 
-export PREFIX=$CURDIR/gcc-install
+export PREFIX=$SCRIPT_DIR/gcc-install
 export TARGET=i686-elf
 export PATH=$PREFIX/bin:$PATH
 
 export BINUTILS_VERSION="binutils-2.34"
 export GCC_VERSION="gcc-10.1.0"
+
+if [ ! -d $SCRIPT_DIR/gcc-source ]; then
+  mkdir -p $SCRIPT_DIR/gcc-source
+fi
+
+if [ ! -e $SCRIPT_DIR/gcc-source/$BINUTILS_VERSION.tar.gz ]; then
+  echo "Downloading $BINUTILS_VERSION..."
+  pushd $SCRIPT_DIR/gcc-source
+    curl -O "https://ftp.gnu.org/gnu/binutils/$BINUTILS_VERSION.tar.gz"
+  popd
+fi
+
+if [ ! -e $SCRIPT_DIR/gcc-source/$GCC_VERSION.tar.gz ]; then
+  echo "Downloading $GCC_VERSION..."
+  pushd $SCRIPT_DIR/gcc-source
+    curl -O "https://ftp.gnu.org/gnu/gcc/gcc-10.1.0/$GCC_VERSION.tar.gz"
+  popd
+fi
 
 echo "Toolchain will install to: $PREFIX"
 

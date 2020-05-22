@@ -11,7 +11,7 @@ env = Environment(
 env['ENV']['TERM'] = os.environ['TERM'] # Color terminal
 env.VariantDir('build/Kernel', 'Kernel', duplicate=0)
 
-env.Append(CXXFLAGS = ['-std=c++17', '-ffreestanding', '-O2', '-Wall', '-Wextra', '-fno-exceptions', '-fno-rtti'])
+env.Append(CXXFLAGS = ['-std=c++17', '-ffreestanding', '-g', '-O0', '-Wall', '-Wextra', '-fno-exceptions', '-fno-rtti'])
 
 # Kernel CPP files
 kernel_objects = []
@@ -21,12 +21,12 @@ for root, dirs, files in os.walk("Kernel"):
       src_path = os.path.join(root, file)
       build_path = src_path.replace('Kernel/', 'build/Kernel/', 1)
       print(src_path)
-      kernel_objects.append( env.Object(target=build_path, CCFLAGS=' -O2 -nostdlib -lgcc' ) )
+      kernel_objects.append( env.Object(target=build_path, CCFLAGS=' -O0 -nostdlib -lgcc' ) )
 
 # Bootloader
 bootloader = env.Object('build/Kernel/boot.s')
 
 # Kernel Image
 kernel_env = env.Clone()
-kernel_env['LINKFLAGS'] = '-T linker.ld -ffreestanding -O2 -nostdlib'
+kernel_env['LINKFLAGS'] = '-T linker.ld -ffreestanding -O0 -nostdlib'
 kernel_env.Program('build/qos_image.bin', source=[bootloader] + kernel_objects)

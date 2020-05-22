@@ -84,15 +84,14 @@ i32 printf(const char* format, ...) {
 	va_start(parameters, format);
 
 	i32 written = 0;
-	while(*format) {
+	while(*format != '\0') {
 		if(*format == '%') {
 
 			// TODO : Formatting, padding, etc. (%04d, %-4s, etc.)
 
 			if(format[1] == 'd' || format[1] == 'x') {
-				int val = va_arg(parameters, int);
 				const u32 base = (format[1] == 'd') ? 10 : 16;
-				written += printf_d(val, base, [](const char c) { putc(c); });
+				written += printf_d(va_arg(parameters, int), base, [](const char c) { putc(c); });
 				format += 2;
 			} 
 			
