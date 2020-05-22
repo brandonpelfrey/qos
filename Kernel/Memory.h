@@ -3,7 +3,7 @@
 #include "multiboot.h"
 
 namespace memory {
-  void initialize(multiboot_info_t *mbd);
-  void* kmalloc();
-  void kfree();
-}
+void initialize(multiboot_info_t* mbd);
+void* kmalloc();
+void kfree();
+}  // namespace memory
