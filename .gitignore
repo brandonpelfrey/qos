@@ -1,4 +1,4 @@
-toolchain/gcc-install
-toolchain/gcc-source
 .sconsign.dblite
 build
+*.o
+*.bin
