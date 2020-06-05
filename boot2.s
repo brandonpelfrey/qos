@@ -66,7 +66,7 @@ setup_long_mode:
   mov edi, cr3 ; Reset CR3 back to 0x1000
 
   ; 2.2 Now we have 4K zero'd out at 0x1000. Let's create a single chain of PML4T/PDPT/PDT/PT
-  ;     (Note: '3' here indicates readable/writeable pages, and they are marked present)
+  ;     (Note: '3' here indicates readable/writeable/present pages)
   mov dword [edi], 0x2003
   add edi, 0x1000
   mov dword [edi], 0x3003
@@ -104,11 +104,13 @@ setup_long_mode:
   ; 6. We're now in Long Mode, but a 32-bit compatibility version
   ; We need to load a 64-bit GDT and then do a long jump there
   lgdt [GDT64.Pointer]
+  mov ax, GDT64.Data
   jmp GDT64.Code:LongModeStart
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-; 64-bit GDT Table
+; 64-bit Global Descriptor Table (GDT)
 ; Contains one null descriptor, and one code and data segment which identity-maps the entire range
+; There isn't an interesting structure to this table since segmentation isn't used in x86-64.
 GDT64:
   .Null: equ $ - GDT64
     dw 0xFFFF
@@ -142,18 +144,31 @@ GDT64:
 bits 64
 LongModeStart:
   cli
+
+  ; Load data segments with offset to our single data segment selector in the GDT.
   mov ax, GDT64.Data
   mov ds, ax
   mov es, ax
   mov fs, ax
   mov gs, ax
   mov ss, ax
+
+
   mov edi, 0xB8000
   mov rax, 0x1F211F201F201F20
   mov ecx, 500
   rep stosq
 
+  ; Setup a small initial stack for the kernel
+  mov rsp, small_stack_top
+
+  ; Pass in the memory map to __kernel_main
+  mov rdi, mmap_array_start
+  
+  ; Jump into the 
   call __kernel_main
+
+  ; If we get back here, halt indefinitely (to leave any messages etc on the screen)
   die:
     cli
     hlt
@@ -169,3 +184,12 @@ mmap_array_size:
   dw 0
 mmap_array_start:
   resq (MMAP_MAX_ENTRIES)
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; Small initial 16KiB stack for the kernel startup
+
+align 16
+small_stack_reservation:
+  resb (1024 * 16)
+small_stack_top:

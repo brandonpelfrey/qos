@@ -28,6 +28,8 @@ global __boot_disk_identifier
 
 bits 16
 __boot:
+  cli
+  
   ; Save the disk number we booted from (BIOS placed it in the dl register for us)
   mov [__boot_disk_identifier], dl
 
