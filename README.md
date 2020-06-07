@@ -2,13 +2,8 @@
 
 # Summary
 
-# Prerequisites to build
-```
-sudo apt install qemu-system-x86 scons
+# Prerequisites to build (MacOS X)
 ```
 
-```
-cd toolchain
-./build.sh
 ```
 

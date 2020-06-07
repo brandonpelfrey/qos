@@ -8,11 +8,12 @@ global __kernel_copy_target
 ; Okay, now that we don't need to worry about everything fitting in just 512 bytes,
 ; we can continue booting.
 
+bits 16
 __kernel_copy_target:
 
-bits 16
 ; Ask the BIOS about the memory map on this system, store in RAM for later reading.
 ; https://wiki.osdev.org/Detecting_Memory_(x86)#Getting_an_E820_Memory_Map
+
 setup_mmap:
   mov di, mmap_array_start
   xor ebx, ebx
@@ -29,19 +30,12 @@ setup_mmap:
     test ebx, ebx
     jz .read_mmap_done
 
-    ; Got a valid entry, increment the entry count and move our di pointer along by the number of bytes read
+    ; Got a valid entry, increment the entry count and move our di pointer along by the number of bytes read.
+    ; Entries might be 20 or 24 bytes, but all we care about is the first 20 bytes. Keep everything aligned
+    ; by assuming 24 the whole time.
     inc bp
-
-    cmp cl, 20
-    jg .read_24
-    
-    .read_20:
-      add di, 20
-      jmp .read_mmap_entry
-
-    .read_24:
-      add di, 24
-      jmp .read_mmap_entry
+    add di, 24
+    jmp .read_mmap_entry
 
   .read_mmap_done:
   mov [mmap_array_size], bp
@@ -63,7 +57,7 @@ setup_long_mode:
   xor eax, eax
   mov ecx, 4096
   rep stosd
-  mov edi, cr3 ; Reset CR3 back to 0x1000
+  mov edi, cr3 ; the stosd before this trashed EDI, Reset EDI back to 0x1000
 
   ; 2.2 Now we have 4K zero'd out at 0x1000. Let's create a single chain of PML4T/PDPT/PDT/PT
   ;     (Note: '3' here indicates readable/writeable/present pages)
@@ -153,7 +147,6 @@ LongModeStart:
   mov gs, ax
   mov ss, ax
 
-
   mov edi, 0xB8000
   mov rax, 0x1F211F201F201F20
   mov ecx, 500
@@ -163,7 +156,8 @@ LongModeStart:
   mov rsp, small_stack_top
 
   ; Pass in the memory map to __kernel_main
-  mov rdi, mmap_array_start
+  mov dword rdi, [mmap_array_size]
+  mov rsi, mmap_array_start
   
   ; Jump into the 
   call __kernel_main
@@ -182,6 +176,8 @@ LongModeStart:
 MMAP_MAX_ENTRIES equ 64
 mmap_array_size:
   dw 0
+
+section .bss
 mmap_array_start:
   resq (MMAP_MAX_ENTRIES)
 
@@ -190,6 +186,7 @@ mmap_array_start:
 ; Small initial 16KiB stack for the kernel startup
 
 align 16
+section .bss
 small_stack_reservation:
   resb (1024 * 16)
 small_stack_top:

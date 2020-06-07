@@ -1,15 +1,5 @@
-
-#include <cstdint>
-
-typedef uint64_t u64;
-typedef uint32_t u32;
-typedef uint16_t u16;
-typedef uint8_t u8;
-
-typedef int64_t i64;
-typedef int32_t i32;
-typedef int16_t i16;
-typedef int8_t i8;
+#include "libc.h"
+#include "types.h"
 
 /* Hardware text mode color constants. */
 enum vga_color {
@@ -68,27 +58,6 @@ void putc(char c, u8 color, unsigned x, unsigned y) {
   terminal_buffer[index] = vga_entry(c, color);
 }
 
-constexpr u32 strlen(const char* str) {
-  auto len = 0;
-  while (str[len]) len++;
-  return len;
-}
-
-i32 memcpy(void* destination, void* source, u32 length) {
-  char* d = (char*)destination;
-  char* s = (char*)source;
-
-  for (u32 i = 0; i < length; ++i) *d++ = *s++;
-
-  return length;
-}
-
-void* memset(void* start, u8 value, u32 length) {
-  u8* ptr = (u8*)start;
-  for (u32 i = 0; i < length; ++i) *ptr++ = value;
-  return ptr;
-}
-
 void scroll() {
   for (u32 row = 0; row < VGA_HEIGHT - 1; ++row) {
     u16* src = &terminal_buffer[VGA_WIDTH * (row + 1)];
@@ -128,17 +97,3 @@ void write(const char* data) {
 }
 
 };  // namespace terminal
-
-int testfunc() {
-  return 3;
-}
-
-extern "C" int _kernel_main(u64* bootloader_data) {
-  //
-  testfunc();
-  terminal::initialize();
-  while (1) {
-    //terminal::putc('a');
-  }
-  return 0;
-}

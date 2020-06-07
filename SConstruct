@@ -1,32 +1,51 @@
-import os, sys, subprocess
+import os
 
 ########################################
 # Root compilation settings, shared among all builds
 
 env = Environment(
-  AS='./toolchain/gcc-install/bin/i686-elf-as',
-  CC='./toolchain/gcc-install/bin/i686-elf-gcc',
-  CXX='./toolchain/gcc-install/bin/i686-elf-g++'
+  AS='nasm',
+  CC='x86_64-elf-gcc',
+  CXX='x86_64-elf-gcc',
+  LD='x86_64-elf-ld',
+  OBJCOPY='x86_64-elf-objcopy',
 )
+
 env['ENV']['TERM'] = os.environ['TERM'] # Color terminal
-env.VariantDir('build/Kernel', 'Kernel', duplicate=0)
 
-env.Append(CXXFLAGS = ['-std=c++17', '-ffreestanding', '-g', '-O0', '-Wall', '-Wextra', '-fno-exceptions', '-fno-rtti'])
-
+################################################
 # Kernel CPP files
+#env.VariantDir('build/kernel', 'src/kernel', duplicate=0)
+env['CXXFLAGS'] = '-std=c++17 -ffreestanding -g -O0 -Wall -Wextra -fno-exceptions -fno-rtti'
+
 kernel_objects = []
-for root, dirs, files in os.walk("Kernel"):
+for root, dirs, files in os.walk("src/kernel"):
   for file in files:
     if file.endswith(".cpp"):
       src_path = os.path.join(root, file)
-      build_path = src_path.replace('Kernel/', 'build/Kernel/', 1)
-      print(src_path)
-      kernel_objects.append( env.Object(target=build_path, CCFLAGS=' -O0 -nostdlib -lgcc' ) )
+      build_path = src_path.replace('src/kernel/', 'build/kernel/', 1)
 
+      # Replace the full path inside kernel/... with _ for simple linking in the linker script
+      build_path_part = 'build/kernel'
+      build_prefix, build_suffix = build_path.split(build_path_part)
+      build_suffix = build_suffix.replace('/', '_').replace('.cpp', '.o')
+      build_path = build_prefix + build_path_part + build_suffix
+
+      kernel_objects.append( env.Object(target=build_path, source=src_path, CCFLAGS=' -O0 -nostdlib -lgcc' ) )
+
+################################################
 # Bootloader
-bootloader = env.Object('build/Kernel/boot.s')
+env.VariantDir('build/bootloader', 'src/bootloader', duplicate=0)
+env['ASFLAGS'] = '-f elf64'
 
-# Kernel Image
-kernel_env = env.Clone()
-kernel_env['LINKFLAGS'] = '-T linker.ld -ffreestanding -O0 -nostdlib'
-kernel_env.Program('build/qos_image.bin', source=[bootloader] + kernel_objects)
+boot1 = env.Object('build/bootloader/boot1.s')
+boot2 = env.Object('build/bootloader/boot2.s')
+
+################################################
+# Linking 
+#kernel_env = env.Clone()
+#kernel_env['LINKFLAGS'] = '-T linker.ld -ffreestanding -O0 -nostdlib'
+#kernel_env.Program('build/qos_image.bin', source=[boot1, boot2] + kernel_objects)
+
+qos_linked_elf64 = env.Command('build/qos_linked.o', [boot1, boot2] + kernel_objects, "$LD -T src/linker.ld -o $TARGET build/kernel_*.o")
+qos_image = env.Command('build/image.bin', qos_linked_elf64, "$OBJCOPY -O binary $SOURCE $TARGET")
