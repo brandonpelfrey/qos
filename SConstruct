@@ -16,7 +16,7 @@ env['ENV']['TERM'] = os.environ['TERM'] # Color terminal
 ################################################
 # Kernel CPP files
 #env.VariantDir('build/kernel', 'src/kernel', duplicate=0)
-env['CXXFLAGS'] = '-std=c++17 -ffreestanding -g -O0 -Wall -Wextra -fno-exceptions -fno-rtti'
+env['CXXFLAGS'] = '-std=c++17 -ffreestanding -g -O0 -Wall -Wextra -fno-exceptions -fno-rtti -masm=intel -Isrc/kernel'
 
 kernel_objects = []
 for root, dirs, files in os.walk("src/kernel"):
@@ -31,7 +31,7 @@ for root, dirs, files in os.walk("src/kernel"):
       build_suffix = build_suffix.replace('/', '_').replace('.cpp', '.o')
       build_path = build_prefix + build_path_part + build_suffix
 
-      kernel_objects.append( env.Object(target=build_path, source=src_path, CCFLAGS=' -O0 -nostdlib -lgcc' ) )
+      kernel_objects.append( env.Object(target=build_path, source=src_path) )
 
 ################################################
 # Bootloader
@@ -43,9 +43,5 @@ boot2 = env.Object('build/bootloader/boot2.s')
 
 ################################################
 # Linking 
-#kernel_env = env.Clone()
-#kernel_env['LINKFLAGS'] = '-T linker.ld -ffreestanding -O0 -nostdlib'
-#kernel_env.Program('build/qos_image.bin', source=[boot1, boot2] + kernel_objects)
-
 qos_linked_elf64 = env.Command('build/qos_linked.o', [boot1, boot2] + kernel_objects, "$LD -T src/linker.ld -o $TARGET build/kernel_*.o")
 qos_image = env.Command('build/image.bin', qos_linked_elf64, "$OBJCOPY -O binary $SOURCE $TARGET")

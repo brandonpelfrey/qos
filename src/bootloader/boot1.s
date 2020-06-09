@@ -11,7 +11,7 @@
 ; 3. Read the memory map into RAM for later use.
 ; 3. Setup an initial paging data structure.
 ; 5. Enable PAE/Protected Mode/Paging
-; 6. Load identity-mapped 64-bit ("Long Mode") GDT, and jump to the Kernel
+; 6. Load identity-mapped 64-bit ("Long Mode") GDT, and jump to Kernel start
 
 ; TL;DR: Get us out of 70s compatibility mode, and into the modern era :)
 

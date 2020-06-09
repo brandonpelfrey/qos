@@ -10,13 +10,12 @@ constexpr u32 strlen(const char* str) {
   return len;
 }
 
-i32 memcpy(void* destination, void* source, u32 length) {
-  char* d = (char*)destination;
-  char* s = (char*)source;
-
-  for (u32 i = 0; i < length; ++i) *d++ = *s++;
-
-  return length;
+void memcpy(u8* destination, u8* source, u64 size) {
+  while (size--) {
+    *destination = *source;
+    destination++;
+    source++;
+  }
 }
 
 void* memset(void* start, u8 value, u32 length) {
@@ -40,11 +39,11 @@ struct printf_details {
 const char* HEX_DIGITS = "0123456789ABCDEF";
 
 template <typename Printer, typename Num>
-void printf_dux(int value, Num base, const printf_details& details, Printer printer) {
+void printf_dux(u64 value, Num base, const printf_details& details, Printer printer) {
   // TODO : Fix duplication, better state machine
 
-  if (base == 10 && value < 0) {
-    value = -value;
+  if (base == 10 && value & (1lu << 63)) {
+    value = ~value + 1;
     printer('-');
   }
 
@@ -74,7 +73,7 @@ void printf_dux(int value, Num base, const printf_details& details, Printer prin
   while (chars_written--) printer(*buff_ptr++);
 }
 
-i32 printf(const char* format, ...) {
+int printf_valist(const char* format, va_list parameters) {
   // Function which actually receives characters
   i32 written = 0;
   const auto printer = [&written](const char c) {
@@ -90,9 +89,6 @@ i32 printf(const char* format, ...) {
     details = printf_details{0, 0, 0};
     state = CHAR;
   };
-
-  va_list parameters;
-  va_start(parameters, format);
 
   for (; *format != '\0'; format++) {
     if (state == CHAR) {
@@ -133,20 +129,26 @@ i32 printf(const char* format, ...) {
         end_field();
       }
 
-      else if(*format == 'c') {
+      else if (*format == 'c') {
         // char is promoted to int in varargs ...
-        putc( va_arg(parameters, int) );
-        end_field();
-      } 
-
-      else if(*format == 's') {
-        puts( va_arg(parameters, char*) );
+        putc(va_arg(parameters, int));
         end_field();
       }
 
+      else if (*format == 's') {
+        puts(va_arg(parameters, char*));
+        end_field();
+      }
     }
   }
-  va_end(parameters);
 
+  return written;
+}
+
+int printf(const char* format, ...) {
+  va_list parameters;
+  va_start(parameters, format);
+  const auto written = printf_valist(format, parameters);
+  va_end(parameters);
   return written;
 }

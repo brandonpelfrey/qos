@@ -1,28 +1,36 @@
 
-#include "terminal.h"
-#include "libc.h"
+#include <terminal.h>
+#include <virtual_memory.h>
+#include <libc.h>
+#include <utils.h>
+#include <logging.h>
 
-struct SMAP_entry {
-	uint32_t BaseL; // base address uint64_t
-	uint32_t BaseH;
-	uint32_t LengthL; // length uint64_t
-	uint32_t LengthH;
-	uint32_t Type; // entry Type
-	uint32_t ACPI; // extended
-}__attribute__((packed));
+static klog_spec ENTRY { .module_name="Entry", .text_color=terminal::VGA_COLOR_LIGHT_BLUE };
+
+size_t get_rip()
+{
+  register u64 a asm("rax");
+  asm("lea rax, [rip+0]");
+  return a;
+}
+
+void entry_virtual_addressing() {
+  u64 q = get_rip();
+  kprintf(ENTRY, "Kernel executing at Virtual address 0x%016lx\n", q);
+
+  while(1);
+}
 
 extern "C"
-int __kernel_main(u8 smap_entries_count, SMAP_entry* smap_data) {
+int __kernel_main(vm::SMAP_entry* smap_data) {
   terminal::initialize();
+  vm::initialize(smap_data);
 
-  printf("%d Memory Map (SMAP) Entries @ 0x%lx\n", smap_entries_count, smap_data);
-  for(int i=0; i<smap_entries_count; ++i) {
-    const auto& entry(smap_data[i]);
-    printf(" - Start  0x%08x%08x Length %08x%08x Type %d\n", entry.BaseH, entry.BaseL, entry.LengthH, entry.LengthL, entry.Type);
-  }
-  
-  while (1)
-    ;
+  // Start running the rest of the kernel, but let's first jump into kernel in high address.
+  u64 high_addr = 0xFFFFFFFF80000000;
+  u64 step2_addr = high_addr + ((u64)entry_virtual_addressing);
+  ((void(*)())step2_addr)();
 
+  panic("Reached end of __kernel_main. This should never happen.");
   return 0;
 }

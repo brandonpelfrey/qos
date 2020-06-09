@@ -2,7 +2,21 @@
 #include "types.h"
 
 /* Hardware text mode color constants. */
-enum vga_color {
+
+static const unsigned VGA_WIDTH = 80;
+static const unsigned VGA_HEIGHT = 25;
+
+///////////////////////////////
+
+unsigned terminal_row;
+unsigned terminal_column;
+u8 terminal_color;
+u16* terminal_buffer;
+
+///////////////////////////////
+
+namespace terminal {
+  enum vga_color {
   VGA_COLOR_BLACK = 0,
   VGA_COLOR_BLUE = 1,
   VGA_COLOR_GREEN = 2,
@@ -20,19 +34,9 @@ enum vga_color {
   VGA_COLOR_LIGHT_BROWN = 14,
   VGA_COLOR_WHITE = 15,
 };
-static const unsigned VGA_WIDTH = 80;
-static const unsigned VGA_HEIGHT = 25;
 
-///////////////////////////////
-
-unsigned terminal_row;
-unsigned terminal_column;
-u8 terminal_color;
-u16* terminal_buffer;
-
-///////////////////////////////
-
-namespace terminal {
+void set_color_bg(vga_color color) { terminal_color = (color << 4) | (terminal_color & 0xf);}
+void set_color_fg(vga_color color) { terminal_color = (terminal_color & 0xf0) | color; }
 
 constexpr u8 vga_entry_color(enum vga_color fg, enum vga_color bg) { return fg | bg << 4; }
 
@@ -51,7 +55,7 @@ void initialize() {
   }
 }
 
-void SetColor(u8 color) { terminal_color = color; }
+void set_color(u8 color) { terminal_color = color; }
 
 void putc(char c, u8 color, unsigned x, unsigned y) {
   const unsigned index = y * VGA_WIDTH + x;
@@ -60,8 +64,8 @@ void putc(char c, u8 color, unsigned x, unsigned y) {
 
 void scroll() {
   for (u32 row = 0; row < VGA_HEIGHT - 1; ++row) {
-    u16* src = &terminal_buffer[VGA_WIDTH * (row + 1)];
-    u16* dst = src - VGA_WIDTH;
+    u8* src = (u8*)&terminal_buffer[VGA_WIDTH * (row + 1)];
+    u8* dst = src - VGA_WIDTH;
     memcpy(dst, src, VGA_WIDTH * sizeof(terminal_buffer[0]));
   }
 

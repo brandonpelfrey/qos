@@ -38,7 +38,10 @@ setup_mmap:
     jmp .read_mmap_entry
 
   .read_mmap_done:
-  mov [mmap_array_size], bp
+  ; We've read all the real entries. Input a bogus one at the end as a marker.
+  mov ecx, 6
+  xor eax, eax
+  rep stosd
 
 
 setup_long_mode:
@@ -95,8 +98,8 @@ setup_long_mode:
   or eax, 1<<31 | 1<<0
   mov cr0, eax
 
-  ; 6. We're now in Long Mode, but a 32-bit compatibility version
-  ; We need to load a 64-bit GDT and then do a long jump there
+  ; 6. We're now in Long Mode, but we're in a 32-bit compatibility mode.
+  ; We need to load a 64-bit GDT and then do a long jump there to get to real 64bit code.
   lgdt [GDT64.Pointer]
   mov ax, GDT64.Data
   jmp GDT64.Code:LongModeStart
@@ -104,7 +107,7 @@ setup_long_mode:
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; 64-bit Global Descriptor Table (GDT)
 ; Contains one null descriptor, and one code and data segment which identity-maps the entire range
-; There isn't an interesting structure to this table since segmentation isn't used in x86-64.
+; There isn't any interesting structure to this table since segmentation isn't used in x86-64.
 GDT64:
   .Null: equ $ - GDT64
     dw 0xFFFF
@@ -147,17 +150,11 @@ LongModeStart:
   mov gs, ax
   mov ss, ax
 
-  mov edi, 0xB8000
-  mov rax, 0x1F211F201F201F20
-  mov ecx, 500
-  rep stosq
-
   ; Setup a small initial stack for the kernel
   mov rsp, small_stack_top
 
   ; Pass in the memory map to __kernel_main
-  mov dword rdi, [mmap_array_size]
-  mov rsi, mmap_array_start
+  lea dword rdi, [mmap_array_start]
   
   ; Jump into the 
   call __kernel_main
@@ -173,13 +170,10 @@ LongModeStart:
 ; Memory map entries. We just read it from the BIOS here in the bootloader,
 ; but it will be interpreted later when we first get into the kernel.
 
-MMAP_MAX_ENTRIES equ 64
-mmap_array_size:
-  dw 0
-
 section .bss
+MMAP_MAX_ENTRIES equ 32
 mmap_array_start:
-  resq (MMAP_MAX_ENTRIES)
+  resq (MMAP_MAX_ENTRIES * 3)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

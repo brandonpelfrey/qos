@@ -19,7 +19,7 @@ SECTIONS
 		bootloader/boot2.o(.text);
 	}
 
-	.kernel : {
+	.kernel : AT(0x8000) {
 		kernel_*.o(.text);
 	}
 
