@@ -1,5 +1,5 @@
 #include <libc.h>
-#include <utils.h>
+#include <utils/utils.h>
 #include <virtual_memory.h>
 #include <logging.h>
 
@@ -22,12 +22,13 @@ void setup_paging() {
   u64* P2 = (u64*)0x6000;
   for (int i = 0; i < 512; ++i) {
     const u64 P2_LARGE_PAGE_SIZE = (2 * 1024 * 1024);  // 2MB
-    const u64 offset = 0 + i * P2_LARGE_PAGE_SIZE;
+    const u64 offset = (size_t)0x200000 + i * P2_LARGE_PAGE_SIZE;
     P2[i] = offset | 128 | 3;
   }
   cr3_write(0x1000);
 }
 
+SMAP_entry* __smap_array; // Ends when type == 0xFFFFFFFF
 SMAP_entry* __conventional_memory_root;
 
 SMAP_entry* get_largest_conventional_memory_region(SMAP_entry* smap_data) {
@@ -47,7 +48,7 @@ SMAP_entry* get_largest_conventional_memory_region(SMAP_entry* smap_data) {
   }
 
   if (largest_entry == nullptr) {
-    panic("No Type-1 memory regions found in SMAP.");
+    kpanic("No Type-1 memory regions found in SMAP.");
   }
 
   return largest_entry;
@@ -55,6 +56,7 @@ SMAP_entry* get_largest_conventional_memory_region(SMAP_entry* smap_data) {
 
 void parse_physical_memory(SMAP_entry* smap_data) {
   // Find a single main memory segment
+  __smap_array = smap_data;
   __conventional_memory_root = get_largest_conventional_memory_region(smap_data);
 
   size_t region_size = ((size_t)__conventional_memory_root->LengthH << 32) | (size_t)__conventional_memory_root->LengthL;
@@ -62,7 +64,6 @@ void parse_physical_memory(SMAP_entry* smap_data) {
   kprintf(VM, "Found %d.%d MiB usable RAM @ Physical address 0x%08x%08x\n", region_size_kib / 1024, region_size_kib % 1024,
          __conventional_memory_root->BaseH, __conventional_memory_root->BaseL);
 }
-
 
 void initialize(SMAP_entry* smap_data) {
   kprintf(VM, "Setting up virtual memory\n");

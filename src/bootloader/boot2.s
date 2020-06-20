@@ -1,5 +1,4 @@
 
-extern __kernel_main
 global __kernel_copy_target
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -38,7 +37,7 @@ setup_mmap:
     jmp .read_mmap_entry
 
   .read_mmap_done:
-  ; We've read all the real entries. Input a bogus one at the end as a marker.
+  ; We've read all the real entries. Input a bogus one at the end as a marker. (Type=0)
   mov ecx, 6
   xor eax, eax
   rep stosd
@@ -82,7 +81,9 @@ setup_long_mode:
     add edi, 8
     loop .SetEntry
 
-  ; 3. Enable Physical Address Extension (PAE)
+  ; 3. Enable Physical Address Extension (PAE). 
+  ; NOTE: This will cause the GDT to be interpreted as 512 64bit entries, even before we
+  ;       jump to actual 64bit code.
   mov eax, cr4
   or  eax, 0x00000020
   mov cr4, eax
@@ -108,28 +109,29 @@ setup_long_mode:
 ; 64-bit Global Descriptor Table (GDT)
 ; Contains one null descriptor, and one code and data segment which identity-maps the entire range
 ; There isn't any interesting structure to this table since segmentation isn't used in x86-64.
+align 64
 GDT64:
   .Null: equ $ - GDT64
-    dw 0xFFFF
+    dw 0
     dw 0
     db 0
     db 0
-    db 1
+    db 0
     db 0
   .Code: equ $ - GDT64
     dw 0
     dw 0
     db 0
-    db 1001_1010b
-    db 1010_1111b
+    db 1001_1000b ; Access Byte
+    db 0010_0000b ; Flags, Limit
     db 0
   .Data: equ $ - GDT64
     dw 0
     dw 0
     db 0
-    db 10010010b
-    db 00000000b
-  db 0
+    db 1001_0010b ; Access Byte
+    db 0000_0000b ; Flags, Limit
+    db 0
   .Pointer:
     dw $ - GDT64 - 1
     dq GDT64
@@ -153,17 +155,129 @@ LongModeStart:
   ; Setup a small initial stack for the kernel
   mov rsp, small_stack_top
 
-  ; Pass in the memory map to __kernel_main
-  lea dword rdi, [mmap_array_start]
-  
-  ; Jump into the 
-  call __kernel_main
+  ; Setup additional paging with highest 2GB pointing at beginning of physical memory
+  call setup_high_memory_paging
+
+  ; Copy the kernel to the beginning of that area  
+  call install_kernel_to_high_memory
+
+  ; Pass in the memory map to __kernel_main, and jump in
+  lea rdi, [mmap_array_start]
+
+  ; Jump to high mem kernel stuff
+  mov rax, 0xFFFFFFFF80000000
+  call rax
 
   ; If we get back here, halt indefinitely (to leave any messages etc on the screen)
   die:
     cli
     hlt
     jmp die
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+setup_high_memory_paging:
+
+  ;;;;;;
+  ; Get address of the largest type=1 physical memory segment
+
+  xor rcx, rcx ; rcx = Current SMAP entry address
+  xor rdx, rdx ; rdx = Address of largest memory segment found
+  xor rbx, rbx ; rbx = Size of largest memory segment found
+
+  lea ecx, [mmap_array_start]
+  check_entry:
+    mov eax, dword [ecx + 16]
+
+    ; Are we at the end of the list?
+    test eax, eax
+    jz .done
+
+    ; Is this a type-1 memory segment?
+    cmp eax, 1
+    jne .next_entry
+
+    ; This is a type-1 entry: let's see if it's the largest so far.
+    mov rax, [rcx + 12] ; Load high bytes of entry.Length
+    shl rax, 32
+
+    mov r9, [rcx + 8]
+    and r9, 0xFFFFFFFF
+    or rax, r9  ; Load low bytes of entry.Length
+
+    cmp rax, rbx
+    jle .next_entry
+
+    ; This entry is the largest so far
+    mov rdx, rcx
+    mov rbx, rax
+
+    .next_entry:
+      add rcx, 24
+      jmp check_entry
+  .done:
+
+  ;;;;;;
+  ; Let's setup a new paging entry that starts at the largest entry
+
+  ; rdx is currently pointing to the beginning of our largest memory segment
+  ; but need to make sure address is 2MB aligned for using large pages
+  Two_MiB equ (2 * 1024 * 1024)
+
+  add rdx, (Two_MiB-1)
+  and rdx, Two_MiB
+
+  ; Append a few tables to our existing 4-level paging data structure
+  ; 0x1000 holds the top level, and 0x2/3/4000 were already setup to
+  ; describe the bottom of physical memory, which is where we're running
+  ; right now. We'll add entries at 0x5/6000.
+  setup_high_pages:
+    mov rdi, cr3
+    mov qword [0x00000000_00001000 + 511*8], 0x5000 | 3
+    mov qword [0x00000000_00005000 + 510*8], 0x6000 | 3 ; This is END - 2GB
+
+    mov rax, rdx
+    mov rdi, 0x6000
+    mov rcx, 512 * 2
+    .next_entry:
+      test rcx, rcx
+      jz .done
+
+      mov rbx, rax
+      or rbx, (128 | 3) ; Large Pages (2MB), Writeable, Present
+      mov qword [rdi], rbx
+      add rax, Two_MiB
+      add rdi, 8
+      dec rcx
+
+    .done:
+  ret
+  
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; Copies 512KB of kernel code that was loaded from disk and places
+; it into the -2GB space in virtual memory
+install_kernel_to_high_memory:
+  KERNEL_CODE_SOURCE equ (0x7c00 + 4096)
+  KERNEL_CODE_DEST equ 0xFFFFFFFF80000000
+
+  ; 2. Copy the first 1MB of memory  to KERNEL_BASE
+  mov rdi, 0
+  mov rcx, (512 * 1024) ; 512kb
+  .next_byte:
+    test rcx, rcx
+    jz .done
+
+    mov rax, qword [KERNEL_CODE_SOURCE + rdi]
+    mov qword [KERNEL_CODE_DEST + rdi], rax
+    add rdi, 8
+    sub rcx, 8
+    jmp .next_byte
+
+  .done:
+  ret
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

@@ -3,8 +3,8 @@
 
 /* Hardware text mode color constants. */
 
-static const unsigned VGA_WIDTH = 80;
-static const unsigned VGA_HEIGHT = 25;
+const unsigned VGA_WIDTH = 80;
+const unsigned VGA_HEIGHT = 25;
 
 ///////////////////////////////
 

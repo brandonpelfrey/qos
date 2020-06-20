@@ -16,7 +16,7 @@ env['ENV']['TERM'] = os.environ['TERM'] # Color terminal
 ################################################
 # Kernel CPP files
 #env.VariantDir('build/kernel', 'src/kernel', duplicate=0)
-env['CXXFLAGS'] = '-std=c++17 -ffreestanding -g -O0 -Wall -Wextra -fno-exceptions -fno-rtti -masm=intel -Isrc/kernel'
+env['CXXFLAGS'] = '-std=c++17 -ffreestanding -g -O0 -Wall -Wextra -fno-exceptions -fno-rtti -masm=intel -Isrc/kernel -mno-sse -mno-mmx -mno-80387 -mno-red-zone -mcmodel=kernel'
 
 kernel_objects = []
 for root, dirs, files in os.walk("src/kernel"):
@@ -33,6 +33,8 @@ for root, dirs, files in os.walk("src/kernel"):
 
       kernel_objects.append( env.Object(target=build_path, source=src_path) )
 
+kernel_objects.append( env.Object(target='build/boot3.o', source='src/kernel/boot3.s') )
+
 ################################################
 # Bootloader
 env.VariantDir('build/bootloader', 'src/bootloader', duplicate=0)
@@ -43,5 +45,11 @@ boot2 = env.Object('build/bootloader/boot2.s')
 
 ################################################
 # Linking 
-qos_linked_elf64 = env.Command('build/qos_linked.o', [boot1, boot2] + kernel_objects, "$LD -T src/linker.ld -o $TARGET build/kernel_*.o")
-qos_image = env.Command('build/image.bin', qos_linked_elf64, "$OBJCOPY -O binary $SOURCE $TARGET")
+bootloader_linked = env.Command('build/bootloader-linked.o', [boot1, boot2, 'src/linker-boot.ld'], "$LD -T src/linker-boot.ld -o $TARGET")
+kernel_linked = env.Command('build/kernel-linked.o', kernel_objects + ['src/linker-kernel.ld'], "$LD -T src/linker-kernel.ld -o $TARGET build/kernel_*.o")
+
+bootloader_image = env.Command('build/bootloader-image.bin', bootloader_linked, "$OBJCOPY -O binary $SOURCE $TARGET")
+kernel_image = env.Command('build/kernel-image.bin', kernel_linked, "$OBJCOPY -O binary $SOURCE $TARGET")
+
+# Cat together
+qos_image = env.Command('build/image.bin', [bootloader_image, kernel_image], "cat $SOURCES > $TARGET")

@@ -22,9 +22,9 @@
 ; - The BIOS will recognize the boot sector flag we've setup (at the end of this file)
 ;   and will locate the start of this code to 0x7c00 in memory. (org 0x7c00 lets the assembler know this)
 
-extern __kernel_copy_target
 global __boot
 global __boot_disk_identifier
+extern __kernel_copy_target
 
 bits 16
 __boot:
@@ -40,7 +40,7 @@ __boot:
   mov dh, 0           ; head idx
   mov cl, 2           ; sector idx
   mov dl, [__boot_disk_identifier]      ; disk idx
-  mov bx, __kernel_copy_target ; target pointer
+  mov bx, __kernel_copy_target        ; target pointer
   int 0x13
 
   ; Utilize BIOS call to enable A20 (There are lots of ways). 
