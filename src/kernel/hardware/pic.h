@@ -2,4 +2,6 @@
 
 #include <types.h>
 
-void kpanic(const char* msg);
+namespace Hardware::PIC {
+
+};

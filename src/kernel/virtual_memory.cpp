@@ -5,7 +5,7 @@
 
 namespace vm {
 
-static klog_spec VM { .module_name="VM", .text_color=terminal::VGA_COLOR_LIGHT_CYAN };
+static klog_spec VM { .module_name="VM", .text_color=Terminal::VGA_COLOR_LIGHT_CYAN };
 
 void cr3_write(u64 newval) { asm volatile("mov %0, %%cr3" : : "r"(newval) : "memory"); }
 

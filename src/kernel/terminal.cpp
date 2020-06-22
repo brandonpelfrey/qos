@@ -15,7 +15,7 @@ u16* terminal_buffer;
 
 ///////////////////////////////
 
-namespace terminal {
+namespace Terminal {
   enum vga_color {
   VGA_COLOR_BLACK = 0,
   VGA_COLOR_BLUE = 1,
@@ -65,7 +65,7 @@ void putc(char c, u8 color, unsigned x, unsigned y) {
 void scroll() {
   for (u32 row = 0; row < VGA_HEIGHT - 1; ++row) {
     u8* src = (u8*)&terminal_buffer[VGA_WIDTH * (row + 1)];
-    u8* dst = src - VGA_WIDTH;
+    u8* dst = src - VGA_WIDTH * sizeof(u16);
     memcpy(dst, src, VGA_WIDTH * sizeof(terminal_buffer[0]));
   }
 

@@ -35,7 +35,7 @@ __boot:
 
   ; Ready additional sectors from disk into the area above 0x7c00
   mov ah, 0x2         ; read sectors
-  mov al, 50          ; sectors to read << TODO : Yes, this is abitrary right now..
+  mov al, 60          ; sectors to read << TODO : Yes, this is abitrary right now..
   mov ch, 0           ; cylinder idx
   mov dh, 0           ; head idx
   mov cl, 2           ; sector idx

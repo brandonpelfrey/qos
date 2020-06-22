@@ -24,9 +24,9 @@ void* memset(void* start, u8 value, u32 length) {
   return ptr;
 }
 
-void putc(const char c) { terminal::putc(c); }
+void putc(const char c) { Terminal::putc(c); }
 
-void puts(const char* str) { terminal::write(str); }
+void puts(const char* str) { Terminal::write(str); }
 
 ////////////////
 
@@ -137,6 +137,15 @@ int printf_valist(const char* format, va_list parameters) {
 
       else if (*format == 's') {
         puts(va_arg(parameters, char*));
+        end_field();
+      }
+
+      else if (*format == 'p') {
+        u64 val = va_arg(parameters, u64);
+        details.is_long = true;
+        details.is_zero_padded = true;
+        details.min_field_width = 16;
+        printf_dux(val, 16, details, printer);
         end_field();
       }
     }
