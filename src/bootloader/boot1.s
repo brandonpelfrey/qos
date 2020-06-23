@@ -11,9 +11,9 @@
 ; 3. Read the memory map into RAM for later use.
 ; 3. Setup an initial paging data structure.
 ; 5. Enable PAE/Protected Mode/Paging
-; 6. Load identity-mapped 64-bit ("Long Mode") GDT, and jump to Kernel start
-
-; TL;DR: Get us out of 70s compatibility mode, and into the modern era :)
+; 6. Load identity-mapped 64-bit ("Long Mode") GDT
+; 7. Setup initial Paging: Bottom 2MB physical identity-mapped, Top 2GB mapped to beginning of RAM
+; 8. Jump to Kernel in higher-level language
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -33,15 +33,26 @@ __boot:
   ; Save the disk number we booted from (BIOS placed it in the dl register for us)
   mov [__boot_disk_identifier], dl
 
-  ; Ready additional sectors from disk into the area above 0x7c00
-  mov ah, 0x2         ; read sectors
-  mov al, 60          ; sectors to read << TODO : Yes, this is abitrary right now..
-  mov ch, 0           ; cylinder idx
+  mov bx, 0x7c00
   mov dh, 0           ; head idx
-  mov cl, 2           ; sector idx
-  mov dl, [__boot_disk_identifier]      ; disk idx
-  mov bx, __kernel_copy_target        ; target pointer
-  int 0x13
+
+  ; Read additional sectors from disk into the area above 0x7c00
+  read_chunk:
+    mov ah, 0x2         ; command : read sectors
+    mov al, 63          ; sectors to read
+    mov ch, 0           ; cylinder idx
+
+    mov cl, 1           ; sector idx
+    mov dl, [__boot_disk_identifier]      ; disk idx
+    int 0x13
+
+    add bx, 512*63
+
+    ; We'll read ~252 KiB (512 * 63 * 8) before we stop.
+    ; A long time from now, the disk driver will load the rest.
+    inc dh
+    cmp dh, 8
+    jne read_chunk
 
   ; Utilize BIOS call to enable A20 (There are lots of ways). 
   mov ax, 0x2401

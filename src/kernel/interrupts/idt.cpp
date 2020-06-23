@@ -77,8 +77,6 @@ extern "C" void global_interrupt_handler(u64 irq_number, void* rsp) {
 void IDT::Initialize() {
   memset(__IDT, 0, sizeof(__IDT));
 
-  printf("Test\n");
-
   for (int i = 0; i < NUM_IRQS; ++i) {
     InstallHandler(i, (void*)isr_table[i]);
   }

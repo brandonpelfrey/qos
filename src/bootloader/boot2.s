@@ -161,6 +161,10 @@ LongModeStart:
   ; Copy the kernel to the beginning of that area  
   call install_kernel_to_high_memory
 
+  ; Okay, now let's get our real stack
+  ; (kernel_layout.h) KERNEL_STACK_TOP = KERNEL_STACK_BASE + KERNEL_STACK_SIZE - 16;
+  mov rsp, 0xFFFFFFFF80000000 + ((32 + 8) * 1024 * 1024) - 16
+
   ; Pass in the memory map to __kernel_main, and jump in
   lea rdi, [mmap_array_start]
 
@@ -230,26 +234,25 @@ setup_high_memory_paging:
 
   ; Append a few tables to our existing 4-level paging data structure
   ; 0x1000 holds the top level, and 0x2/3/4000 were already setup to
-  ; describe the bottom of physical memory, which is where we're running
+  ; describe the bottom of physical memory, which is where we're executing
   ; right now. We'll add entries at 0x5/6000.
+
   setup_high_pages:
-    mov rdi, cr3
-    mov qword [0x00000000_00001000 + 511*8], 0x5000 | 3
-    mov qword [0x00000000_00005000 + 510*8], 0x6000 | 3 ; This is END - 2GB
+    mov qword [0x1000 + 511*8], 0x5000 | 3
+    mov qword [0x5000 + 510*8], 0x6000 | 3 ; Final 2GiB
 
     mov rax, rdx
-    mov rdi, 0x6000
-    mov rcx, 512 * 2
-    .next_entry:
-      test rcx, rcx
-      jz .done
+    or rax, (3 | 128)  ; Large Pages (2MB), Writeable, Present
 
-      mov rbx, rax
-      or rbx, (128 | 3) ; Large Pages (2MB), Writeable, Present
-      mov qword [rdi], rbx
+    mov rdi, 0x6000
+    mov rcx, 512
+
+    .next_entry:
+      mov qword [rdi], rax
       add rax, Two_MiB
       add rdi, 8
-      dec rcx
+
+      loop .next_entry
 
     .done:
   ret
