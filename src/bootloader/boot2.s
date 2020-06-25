@@ -223,6 +223,17 @@ setup_high_memory_paging:
   .done:
 
   ;;;;;;
+  ; Paging : Setup the first 512GB as identity-mapped
+  mov rdi, 0x2000
+  mov rax, 0x0000000000000000 | 3 | 128
+  mov rcx, 512
+  setup_bottom_identity_paging:
+    mov qword [rdi], rax
+    add rdi, 8
+    add rax, 1024 * 1024 * 1024
+    loop setup_bottom_identity_paging
+
+  ;;;;;;
   ; Let's setup a new paging entry that starts at the largest entry
 
   ; rdx is currently pointing to the beginning of our largest memory segment
