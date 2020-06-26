@@ -2,6 +2,7 @@
 
 #include <types.h>
 
-namespace Hardware::PIC {
+namespace Hardware::PIC
+{
 
 };

@@ -16,18 +16,21 @@
 
 #define VBE_DISPI_LFB_ENABLED (0x40)
 
-namespace Hardware::Drivers {
+namespace Hardware::Drivers
+{
 
-static klog_spec LOG{.module_name = "PCI", .text_color = Terminal::VGA_COLOR_LIGHT_BLUE};
+static klog_spec LOG{ .module_name = "PCI", .text_color = Terminal::VGA_COLOR_LIGHT_BLUE };
 
 BochsGraphicsAdapter bga_driver;
 
-void BochsGraphicsAdapter::write_reg(u16 reg, u16 value) {
+void BochsGraphicsAdapter::write_reg(u16 reg, u16 value)
+{
   bga_driver.io_port.write(reg);
   bga_driver.data_port.write(value);
 }
 
-void BochsGraphicsAdapter::init(u8 pci_bus, u8 device_num) {
+void BochsGraphicsAdapter::init(u8 pci_bus, u8 device_num)
+{
   u32 BAR0 = Hardware::PCI::controller.read(pci_bus, device_num, 0, 0x10);
   BAR0 &= 0xFFFFFFF0 | (0b11111100);
 
@@ -39,7 +42,8 @@ void BochsGraphicsAdapter::init(u8 pci_bus, u8 device_num) {
   kprintf(LOG, "  - Framebuffer @ 0x%p\n", BAR0);
 }
 
-void BochsGraphicsAdapter::set_resolution(u16 xres, u16 yres, u8 bits_per_pixel) {
+void BochsGraphicsAdapter::set_resolution(u16 xres, u16 yres, u8 bits_per_pixel)
+{
   // Disable the display, set relevant registers, then re-enable
   write_reg(VBE_DISPI_INDEX_ENABLE, 0);
   write_reg(VBE_DISPI_INDEX_XRES, xres);
@@ -48,6 +52,9 @@ void BochsGraphicsAdapter::set_resolution(u16 xres, u16 yres, u8 bits_per_pixel)
   write_reg(VBE_DISPI_INDEX_ENABLE, 1 | VBE_DISPI_LFB_ENABLED);
 }
 
-u64 BochsGraphicsAdapter::get_framebuffer_start() { return lfb_address; }
+u64 BochsGraphicsAdapter::get_framebuffer_start()
+{
+  return lfb_address;
+}
 
-}  // namespace Hardware::Drivers
+} // namespace Hardware::Drivers

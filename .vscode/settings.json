@@ -1,6 +1,10 @@
 {
   "files.associations": {
     "*.inc": "cpp",
-    "SConstruct": "python"
+    "SConstruct": "python",
+    "array": "cpp",
+    "string_view": "cpp",
+    "initializer_list": "cpp",
+    "utility": "cpp"
   }
 }

@@ -1,7 +1,7 @@
 #pragma once
 
-#include <types.h>
 #include <stdarg.h>
+#include <types.h>
 
 constexpr u32 strlen(const char* str);
 void puts(const char* str);

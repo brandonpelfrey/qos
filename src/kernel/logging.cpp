@@ -1,8 +1,9 @@
-#include <logging.h>
 #include <libc.h>
+#include <logging.h>
 #include <stdarg.h>
 
-int kprintf(klog_spec& spec, const char* format, ...) {
+int kprintf(klog_spec& spec, const char* format, ...)
+{
   // TODO : save original color
   Terminal::set_color_fg(spec.text_color);
   printf("[%s] ", spec.module_name);

@@ -1,6 +1,11 @@
 
-struct TextBuffer {
-  char *buffer_start;
+struct TextBufferUpdate
+{
+};
+
+struct TextBuffer
+{
+  char* buffer_start;
   int max_lines;
   int line_length;
 
@@ -8,10 +13,10 @@ struct TextBuffer {
   void clear();
 };
 
-void TextBuffer::init() {
-
+void TextBuffer::init()
+{
 }
 
-void TextBuffer::clear() {
-  
+void TextBuffer::clear()
+{
 }

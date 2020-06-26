@@ -2,8 +2,10 @@
 
 #include <types.h>
 
-namespace System {
-struct RegisterStates {
+namespace System
+{
+struct RegisterStates
+{
   u64 rax, rbx, rcx, rdx;
   u64 rsp, rbp, rsi, rdi;
   u64 r8, r9, r10, r11, r12, r13, r14, r15;
@@ -13,7 +15,8 @@ struct RegisterStates {
 
 extern "C" void dump_register_states(RegisterStates*);
 
-struct CallStack {
+struct CallStack
+{
   u64 call_site;
   u64 frame_pointer;
   u64 caller_frame_pointer;
@@ -22,5 +25,4 @@ struct CallStack {
 // Populate call stack information, returning the number of valid call stack structures populated.
 extern "C" int get_call_stack(CallStack*, u64 max_entries);
 
-
-};  // namespace System
+}; // namespace System

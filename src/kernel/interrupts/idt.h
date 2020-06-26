@@ -1,9 +1,12 @@
 #include <types.h>
 
-namespace IDT {
+namespace IDT
+{
 
-namespace Interrupts {
-enum {
+namespace Interrupts
+{
+enum
+{
   DIVIDE_BY_ZERO = 0,
   DEUBG,
   NMI,
@@ -33,9 +36,11 @@ enum {
 };
 }
 
-struct Entry {
+struct Entry
+{
   void (*handler)();
-  struct {
+  struct
+  {
     u8 interrupt_stack_index;
     u8 is_trap_gate;
     u8 descriptor_priviledge_level;
@@ -46,4 +51,4 @@ struct Entry {
 void Initialize();
 void Register(Entry& descriptor);
 
-}  // namespace IDT
+} // namespace IDT

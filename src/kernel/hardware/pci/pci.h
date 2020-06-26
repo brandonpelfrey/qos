@@ -9,9 +9,11 @@
 // vendor_id, device_id
 // class_id, subclass_id
 
-namespace Hardware::PCI {
+namespace Hardware::PCI
+{
 
-struct Controller {
+struct Controller
+{
   IO::Port32 data_port;
   IO::Port32 command_port;
 

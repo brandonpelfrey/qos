@@ -16,7 +16,6 @@ env['ENV']['TERM'] = os.environ['TERM'] # Color terminal
 ################################################
 # Kernel files
 
-# TODO : Currently, any amount of optimization -O{1,2,3} will cause triple fault. Haven't looked into why yet.
 env['CXXFLAGS'] = '-std=c++17 -ffreestanding -g -O0 -Wall -Wextra -fno-exceptions -fno-rtti -masm=intel -Isrc/kernel -mno-sse -mno-mmx -mno-80387 -mno-red-zone -mcmodel=kernel'
 
 # Walk through and find every .cpp/.s file, give them a unique name based on path and file type

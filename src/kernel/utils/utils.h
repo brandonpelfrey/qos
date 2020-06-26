@@ -2,4 +2,4 @@
 
 #include <types.h>
 
-void kpanic(const char* msg);
+[[noreturn]] void kpanic(const char* msg, ...);

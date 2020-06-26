@@ -3,18 +3,20 @@
 #include <hardware/io.h>
 #include <types.h>
 
-namespace Hardware::Drivers {
+namespace Hardware::Drivers
+{
 /* "BGA" (PCIVendor 1234, Device 1111)
 https://wiki.osdev.org/Bochs_VBE_Extensions
 */
-struct BochsGraphicsAdapter {
- private:
-  void write_reg(u16 register, u16 data);
+struct BochsGraphicsAdapter
+{
+private:
+  void write_reg(u16 reg, u16 data);
 
   // Base address of linear framebuffer
   u64 lfb_address;
 
- public:
+public:
   IO::Port16 io_port;
   IO::Port16 data_port;
 
@@ -25,4 +27,4 @@ struct BochsGraphicsAdapter {
 };
 
 extern BochsGraphicsAdapter bga_driver;
-}  // namespace Hardware::Drivers
+} // namespace Hardware::Drivers

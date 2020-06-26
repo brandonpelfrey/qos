@@ -2,8 +2,10 @@
 
 #include "types.h"
 
-namespace Terminal {
-  enum vga_color {
+namespace Terminal
+{
+enum vga_color
+{
   VGA_COLOR_BLACK = 0,
   VGA_COLOR_BLUE = 1,
   VGA_COLOR_GREEN = 2,
@@ -29,7 +31,7 @@ void initialize();
 void putc(char c);
 void putc(char c, u8 color, unsigned x, unsigned y);
 
-void write(const char *data);
-void write(const char *data, unsigned size);
+void write(const char* data);
+void write(const char* data, unsigned size);
 
-}  // namespace terminal
+} // namespace terminal

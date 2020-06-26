@@ -15,8 +15,10 @@ u16* terminal_buffer;
 
 ///////////////////////////////
 
-namespace Terminal {
-  enum vga_color {
+namespace Terminal
+{
+enum vga_color
+{
   VGA_COLOR_BLACK = 0,
   VGA_COLOR_BLUE = 1,
   VGA_COLOR_GREEN = 2,
@@ -35,35 +37,56 @@ namespace Terminal {
   VGA_COLOR_WHITE = 15,
 };
 
-void set_color_bg(vga_color color) { terminal_color = (color << 4) | (terminal_color & 0xf);}
-void set_color_fg(vga_color color) { terminal_color = (terminal_color & 0xf0) | color; }
+void set_color_bg(vga_color color)
+{
+  terminal_color = (color << 4) | (terminal_color & 0xf);
+}
+void set_color_fg(vga_color color)
+{
+  terminal_color = (terminal_color & 0xf0) | color;
+}
 
-constexpr u8 vga_entry_color(enum vga_color fg, enum vga_color bg) { return fg | bg << 4; }
+constexpr u8 vga_entry_color(enum vga_color fg, enum vga_color bg)
+{
+  return fg | bg << 4;
+}
 
-constexpr u16 vga_entry(unsigned char uc, u8 color) { return (u16)uc | (u16)color << 8; }
+constexpr u16 vga_entry(unsigned char uc, u8 color)
+{
+  return (u16)uc | (u16)color << 8;
+}
 
-void initialize() {
+void initialize()
+{
   terminal_row = 0;
   terminal_column = 0;
   terminal_color = vga_entry_color(VGA_COLOR_LIGHT_GREY, VGA_COLOR_BLACK);
   terminal_buffer = (u16*)0xB8000;
-  for (unsigned y = 0; y < VGA_HEIGHT; y++) {
-    for (unsigned x = 0; x < VGA_WIDTH; x++) {
+  for (unsigned y = 0; y < VGA_HEIGHT; y++)
+  {
+    for (unsigned x = 0; x < VGA_WIDTH; x++)
+    {
       const unsigned index = y * VGA_WIDTH + x;
       terminal_buffer[index] = vga_entry(' ', terminal_color);
     }
   }
 }
 
-void set_color(u8 color) { terminal_color = color; }
+void set_color(u8 color)
+{
+  terminal_color = color;
+}
 
-void putc(char c, u8 color, unsigned x, unsigned y) {
+void putc(char c, u8 color, unsigned x, unsigned y)
+{
   const unsigned index = y * VGA_WIDTH + x;
   terminal_buffer[index] = vga_entry(c, color);
 }
 
-void scroll() {
-  for (u32 row = 0; row < VGA_HEIGHT - 1; ++row) {
+void scroll()
+{
+  for (u32 row = 0; row < VGA_HEIGHT - 1; ++row)
+  {
     u8* src = (u8*)&terminal_buffer[VGA_WIDTH * (row + 1)];
     u8* dst = src - VGA_WIDTH * sizeof(u16);
     memcpy(dst, src, VGA_WIDTH * sizeof(terminal_buffer[0]));
@@ -72,32 +95,44 @@ void scroll() {
   memset(&terminal_buffer[VGA_WIDTH * (VGA_HEIGHT - 1)], 0, sizeof(terminal_buffer[0]) * VGA_WIDTH);
 }
 
-void putc(char c) {
-  if (c == '\r') {
+void putc(char c)
+{
+  if (c == '\r')
+  {
     terminal_column = 0;
     return;
-  } else if (c == '\n') {
+  }
+  else if (c == '\n')
+  {
     terminal_column = VGA_WIDTH;
-  } else {
+  }
+  else
+  {
     putc(c, terminal_color, terminal_column, terminal_row);
     terminal_column++;
   }
 
-  if (terminal_column == VGA_WIDTH) {
+  if (terminal_column == VGA_WIDTH)
+  {
     terminal_column = 0;
-    if (++terminal_row == VGA_HEIGHT) {
+    if (++terminal_row == VGA_HEIGHT)
+    {
       scroll();
       terminal_row = VGA_HEIGHT - 1;
     }
   }
 }
 
-void write(const char* data, unsigned size) {
-  for (unsigned i = 0; i < size; i++) putc(data[i]);
+void write(const char* data, unsigned size)
+{
+  for (unsigned i = 0; i < size; i++)
+    putc(data[i]);
 }
 
-void write(const char* data) {
-  for (auto ptr = data; *ptr != 0; ptr++) putc(*ptr);
+void write(const char* data)
+{
+  for (auto ptr = data; *ptr != 0; ptr++)
+    putc(*ptr);
 }
 
-};  // namespace terminal
+}; // namespace terminal
